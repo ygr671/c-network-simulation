@@ -11,7 +11,7 @@ typedef struct
   // TODO ajouter état + rôle des ports aussi + un truc pour stocker/gérer les
   // messages
   unsigned short priorite_stp;
-  table_commutation_t *tc;
+  table_commutation_t tc;
 } switch_t;
 
 // Fonctions pour switch_t

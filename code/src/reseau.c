@@ -17,10 +17,7 @@ void init_reseau_t(reseau_t *rs)
   rs->index_equipement_actuel = 0;
   rs->capacite_equipements = CAPACITE_INITIALE;
 
-  rs->equipements =
-      malloc(rs->capacite_equipements *
-             sizeof(equipement_t)); // Pas de calloc() dans le code pour une
-                                    // lecture plus intuitive
+  rs->equipements = malloc(rs->capacite_equipements * sizeof(equipement_t)); // Pas de calloc() dans le code pour une lecture plus intuitive
   if (rs->equipements == NULL)
   {
     perror("malloc (init_reseau_t -> equipements) : ");
@@ -48,9 +45,9 @@ void deinit_reseau_t(reseau_t *rs)
   // commutation des switch)
   for (size_t i = 0; i < rs->nb_equipements; i++)
   {
-    if (rs->equipements->type == SWITCH)
+    if (rs->equipements[i].type == SWITCH)
     {
-      deinit_table_commutation_t(rs->equipements->contenu.sw.tc);
+      deinit_table_commutation_t(&rs->equipements[i].contenu.sw.tc);
     }
   }
 
@@ -63,13 +60,6 @@ void deinit_reseau_t(reseau_t *rs)
   free(rs->liens);
   rs->liens = NULL;
 }
-
-/*
-void ajouter_station_t(reseau_t * rs, station_t st)
-{
-
-}
-*/
 
 void afficher_reseau_t(const reseau_t *rs)
 {
@@ -111,7 +101,7 @@ void afficher_equipement_t(const equipement_t *eq)
     printf(
         "\nNombre de ports : %hu\nPriorité STP : %hu\nTable de commutation :\n",
         eq->contenu.sw.nb_ports, eq->contenu.sw.priorite_stp);
-    afficher_table_commutation(eq->contenu.sw.tc);
+    afficher_table_commutation(&eq->contenu.sw.tc);
     break;
   default:
     fprintf(stderr, "Erreur : type d'équipement inconnu\n");
@@ -190,8 +180,7 @@ void ajouter_equipement_t(reseau_t *rs, char *eq_desc)
     // Bug causé ici : lecture et/ou écriture de mémoire non allouée
     eq.id = id;
     rs->equipements[rs->index_equipement_actuel] = eq;
-    init_table_commutation_t(
-        rs->equipements[rs->index_equipement_actuel].contenu.sw.tc);
+    init_table_commutation_t(&rs->equipements[rs->index_equipement_actuel].contenu.sw.tc);
     rs->index_equipement_actuel++;
     id++;
     break;
