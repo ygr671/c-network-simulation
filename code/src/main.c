@@ -4,12 +4,7 @@
 // Headers
 
 #include "include/config.h"
-#include "include/ip.h"
-#include "include/mac.h"
 #include "include/reseau.h"
-#include "include/station.h"
-#include "include/switch.h"
-#include "include/table_commutation.h"
 
 int main(void)
 {

@@ -1,6 +1,9 @@
 # Fichiers VSCode
 .code/
 
+# CLion 
+.idea/
+
 # Fichiers objet et compilation
 code/bin/*
 code/build/*

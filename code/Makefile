@@ -16,7 +16,7 @@ CFLAGS = -Wall -Wextra -Werror -pedantic -I$(INC_DIR)
 LDFLAGS = # -fsanitize=address
 
 # Cible principale
-all: $(TARGET)
+all: $(TARGET) run
 
 # Edition de liens
 $(TARGET): $(OBJS)
@@ -31,6 +31,10 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 # Nettoyage
 clean:
 	rm -rf $(BUILD_DIR)/*.o $(TARGET)
+
+# Lancement du programme compilé
+run:
+	$(TARGET)
 
 .PHONY: all clean
 
