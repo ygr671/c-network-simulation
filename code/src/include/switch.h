@@ -3,11 +3,20 @@
 #include "mac.h"
 #include "table_commutation.h"
 
+// Énumération pour les états de ports
+typedef enum
+{
+  ROOT,
+  DESIGNATED,
+  BLOCKED
+} etat_port_t; 
+
 // Structure pour un switch
 typedef struct
 {
   mac_address_t ma;
   unsigned short nb_ports;
+  etat_port_t * etat_ports;
   // TODO ajouter état + rôle des ports aussi + un truc pour stocker/gérer les
   // messages
   unsigned short priorite_stp;

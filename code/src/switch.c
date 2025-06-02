@@ -26,4 +26,6 @@ void init_switch_t(switch_t *sw, mac_address_t ma, unsigned short priorite_stp)
 void deinit_switch_t(switch_t *sw)
 {
   deinit_table_commutation_t(&sw->tc);
+  free(sw->etat_ports);
+  sw->etat_ports = NULL;
 }

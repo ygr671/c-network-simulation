@@ -49,7 +49,7 @@ void charger_configuration(reseau_t *rs, const char *path)
     }
 
     // Ajout des liens
-    for (size_t i = 0; i < rs->nb_liens; i++) // rs->nb_liens ; i++)
+    for (size_t i = 0; i < rs->nb_liens; i++)
     {
       if (fgets(ligne_buffer, sizeof(ligne_buffer), fichier) != NULL)
       {

@@ -48,6 +48,8 @@ void deinit_reseau_t(reseau_t *rs)
     if (rs->equipements[i].type == SWITCH)
     {
       deinit_table_commutation_t(&rs->equipements[i].contenu.sw.tc);
+      free(rs->equipements[i].contenu.sw.etat_ports);
+      rs->equipements[i].contenu.sw.etat_ports = NULL;
     }
   }
 
@@ -181,6 +183,7 @@ void ajouter_equipement_t(reseau_t *rs, char *eq_desc)
     eq.id = id;
     rs->equipements[rs->index_equipement_actuel] = eq;
     init_table_commutation_t(&rs->equipements[rs->index_equipement_actuel].contenu.sw.tc);
+    rs->equipements[rs->index_equipement_actuel].contenu.sw.etat_ports = malloc(rs->equipements[rs->index_equipement_actuel].contenu.sw.nb_ports * sizeof(etat_port_t)); 
     rs->index_equipement_actuel++;
     id++;
     break;
