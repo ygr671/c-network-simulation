@@ -17,7 +17,10 @@ void init_reseau_t(reseau_t *rs)
   rs->index_equipement_actuel = 0;
   rs->capacite_equipements = CAPACITE_INITIALE;
 
-  rs->equipements = malloc(rs->capacite_equipements * sizeof(equipement_t)); // Pas de calloc() dans le code pour une lecture plus intuitive
+  rs->equipements =
+      malloc(rs->capacite_equipements *
+             sizeof(equipement_t)); // Pas de calloc() dans le code pour une
+                                    // lecture plus intuitive
   if (rs->equipements == NULL)
   {
     perror("malloc (init_reseau_t -> equipements) : ");
@@ -119,7 +122,7 @@ void afficher_lien_t(const lien_t *ln)
 
 void ajouter_equipement_t(reseau_t *rs, char *eq_desc)
 {
-  // Ajouter le commentaire de pq j'ai mis ça ici
+  // Variable statique pour pouvoir mettre un ID unique à chaque noeud du réseau
   static unsigned short id = 0;
 
   // Parsing de la ligne contenant l'équipement
@@ -182,8 +185,11 @@ void ajouter_equipement_t(reseau_t *rs, char *eq_desc)
     // Bug causé ici : lecture et/ou écriture de mémoire non allouée
     eq.id = id;
     rs->equipements[rs->index_equipement_actuel] = eq;
-    init_table_commutation_t(&rs->equipements[rs->index_equipement_actuel].contenu.sw.tc);
-    rs->equipements[rs->index_equipement_actuel].contenu.sw.etat_ports = malloc(rs->equipements[rs->index_equipement_actuel].contenu.sw.nb_ports * sizeof(etat_port_t)); 
+    init_table_commutation_t(
+        &rs->equipements[rs->index_equipement_actuel].contenu.sw.tc);
+    rs->equipements[rs->index_equipement_actuel].contenu.sw.etat_ports = malloc(
+        rs->equipements[rs->index_equipement_actuel].contenu.sw.nb_ports *
+        sizeof(etat_port_t));
     rs->index_equipement_actuel++;
     id++;
     break;

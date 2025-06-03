@@ -4,5 +4,5 @@
 # Actuellement bugué (à fix)
 
 echo "Formatage en cours"
-find . -type f \( -name "*.cpp" -o -name "*.hpp" \) | xargs clang-format -i
+find . -type f \( -name "*.c" -o -name "*.h" \) | xargs clang-format -i
 echo "Formatage terminé"
