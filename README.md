@@ -13,5 +13,6 @@
 ## Objectifs atteints
 - [x] : Création de toutes les structures de données nécessaires pour la représentation du réseau
     - NB : Il manque les éléments pour la transmission, le stockage et la simulation de messages + protocole STP
-- [ ] : Chargement du fichier de configuration
+- [x] : Chargement du fichier de configuration
     - NB : Il manque l'ajout des liens dans les tables de commutation des switches reliés aux équipements correspondants
+    - EDIT 03-06-2025 : la création du réseau représentant l'état initial à l'instant t = 0, la table de commutation est par définition vide car aucune donnée n'y transite en premier lieu.
