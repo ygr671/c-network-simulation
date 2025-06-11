@@ -1,7 +1,7 @@
+#include <arpa/inet.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
 
 // Headers
 
@@ -24,15 +24,15 @@ int main(void)
   trame_ethernet_t trame;
   mac_address_t src = {{0x00, 0x1A, 0x2B, 0x3C, 0x4D, 0x5E}};
   mac_address_t dest = {{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}}; // Broadcast
-    
+
   init_trame_ethernet(&trame, &src, &dest);
   trame.type = htons(0x0800); // IPv4
-    
+
   // Ajouter des données de test
   const char *message = "Hello Ethernet!";
   memcpy(trame.donnees, message, strlen(message));
   trame.taille_donnees = strlen(message);
-    
+
   afficher_trame(&trame);
   printf("\n");
   afficher_trame_hex(&trame);
