@@ -1,17 +1,8 @@
 #include "include/trame.h"
 #include <arpa/inet.h> // Pour htons()
-#include <arpa/inet.h> // Pour htons()
 #include <stdio.h>
 #include <string.h>
 
-void init_trame_ethernet(trame_ethernet_t *trame, const mac_address_t *src,
-                         const mac_address_t *dest)
-{
-  memcpy(&trame->src, src, sizeof(mac_address_t));
-  memcpy(&trame->dest, dest, sizeof(mac_address_t));
-  trame->type = 0;
-  trame->taille_donnees = 0;
-  memset(trame->donnees, 0, TAILLE_MAX_DONNEES);
 void init_trame_ethernet(trame_ethernet_t *trame, const mac_address_t *src,
                          const mac_address_t *dest)
 {
@@ -26,11 +17,9 @@ void afficher_trame(const trame_ethernet_t *trame)
 {
   printf("Adresse mac destination : ");
   afficher_mac(&trame->dest);
-  printf("/n"); // adresse mac dest
-  printf("Adresse mac source : ");
-  afficher_mac(&trame->src);
-  printf("/n"); //adresse mac src
-  printf("type : 0x%04x\n",trame->type);// adresse type
+  printf("\nAdresse mac source : ");        // adresse mac dest
+  afficher_mac(&trame->src);                // adresse mac src
+  printf("\ntype : 0x%04x\n", trame->type); // adresse type
   printf("\nTaille données: %u octets\n", trame->taille_donnees);
   for (int i = 0; i < trame->taille_donnees; i++)
   {
@@ -39,7 +28,7 @@ void afficher_trame(const trame_ethernet_t *trame)
       printf("\n");
   }
   printf("\n");
-}  
+}
 
 void afficher_trame_hex(const trame_ethernet_t *trame)
 {

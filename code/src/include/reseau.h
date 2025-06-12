@@ -67,7 +67,8 @@ void afficher_equipement_t(const equipement_t *eq);
 
 void ajouter_equipement_t(reseau_t *rs, char *eq_desc);
 
-void traiter_trame_switch(reseau_t *rs, int id_switch, const trame_ethernet_t *trame, int port_entree);
+void traiter_trame_switch(reseau_t *rs, int id_switch,
+                          const trame_ethernet_t *trame, int port_entree);
 
-void envoyer_trame_vers_port(reseau_t *rs, int id_switch, int port, const trame_ethernet_t *trame);
-
+void envoyer_trame_vers_port(reseau_t *rs, int id_switch, int port,
+                             const trame_ethernet_t *trame);

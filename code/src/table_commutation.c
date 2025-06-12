@@ -27,7 +27,8 @@ void deinit_table_commutation_t(table_commutation_t *tc)
   tc->entrees = NULL;
 }
 
-void ajouter_entree_table_commutation(table_commutation_t *tc,entree_table_commutation_t etc)
+void ajouter_entree_table_commutation(table_commutation_t *tc,
+                                      entree_table_commutation_t etc)
 {
   // TODO : vérifier si l'entrée est valide par je ne sais quel moyen
 
@@ -52,14 +53,18 @@ void ajouter_entree_table_commutation(table_commutation_t *tc,entree_table_commu
 
 void afficher_table_commutation(const table_commutation_t *tc)
 {
-  if (tc == NULL || tc->nb_entree == 0)
-  {
-    printf("Table de commmutation vide.\n");
+  if (tc->nb_entree == 0) {
+    printf("Table de commutation vide.\n");
     return;
   }
 
-  for (unsigned short i = 0; i < tc->nb_entree; i++)
-  {
-    afficher_entree_table_commutation(&tc->entrees[i]);
+  printf("Port | Adresse MAC\n");
+  printf("-----+--------------------\n");
+
+  for (int i = 0; i < tc->nb_entree; i++) {
+    printf("%-4d | ", tc->entrees[i].port);
+    afficher_mac(&tc->entrees[i].ma);
+    printf("\n");
   }
+  printf("\n");
 }
