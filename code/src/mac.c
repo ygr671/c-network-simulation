@@ -21,7 +21,7 @@ void afficher_mac(const mac_address_t *ma)
 }
 
 // Fonction pour initialiser une structure mac_address_t à partir d'une chaîne de caractères.
-// Prend en argument un pointeur vers la structure mac_address_t à initialiser et une chaîne de caractères représentant l'adresse MAC (ex: "00:1A:2B:3C:4D:5E").
+// Prend en argument un pointeur vers la structure mac_address_t à initialiser et une chaîne de caractères représentant l'adresse MAC (ex: "00:1A:2B:3C:4D:5E") <- just eun exxemples.
 // Retourne EXIT_SUCCESS en cas de succès, EXIT_FAILURE en cas d'erreur.
 int init_mac_address_t(mac_address_t *ma, const char *mac_char)
 {

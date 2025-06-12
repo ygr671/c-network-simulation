@@ -31,27 +31,26 @@ void afficher_station(const station_t *st)
 // - Elle retourne EXIT_SUCCESS uniquement si les deux initialisations (IP et MAC) échouent.
 int init_station_t(station_t *st, const char *ip, const char *mac)
 {
-  // Déclaration de structures temporaires pour stocker les résultats intermédiaires du parsing des adresses.
-  ip_address_t tmp_ip;
-  mac_address_t tmp_ma;
+  // Structures temporaires pour stocker les adresses IP et MAC à parser
+ip_address_t tmp_ip;
+mac_address_t tmp_ma;
 
-  // Tente d'initialiser tmp_ip à partir de la chaîne 'ip'.
-  // init_ip_address_t retourne EXIT_SUCCESS (0) en cas de succès, ou EXIT_FAILURE (non-zéro) en cas d'échec.
-  // Le bloc 'if' est exécuté si init_ip_address_t retourne une valeur non nulle (échec).
-  if (init_ip_address_t(&tmp_ip, ip))
-  {
-    // En cas d'échec de init_ip_address_t, tmp_ip est mise à zéro par init_ip_address_t elle-même.
-    // La structure st->ip est alors assignée avec cette version mise à zéro de tmp_ip.
-    st->ip = tmp_ip;
-  }
-  else // Le bloc 'else' est exécuté si init_ip_address_t retourne 0 (succès).
-  {
-    // Si l'initialisation de tmp_ip a réussi, st->ip est explicitement mise à zéro ici.
-    // L'initialiseur {{0,0,0,0}, 0} met à zéro le tableau 'paquet' et le champ 'masque' de la structure ip_address_t.
-    st->ip = (ip_address_t){{0, 0, 0, 0}, 0};
-    // La fonction retourne EXIT_FAILURE, indiquant un échec global pour init_station_t malgré le succès de init_ip_address_t.
-    return EXIT_FAILURE;
-  }
+// On essaye d'initialiser tmp_ip à partir de la chaîne 'ip'
+// Si ça échoue, la fonction retourne une valeur non nulle
+if (init_ip_address_t(&tmp_ip, ip))
+{
+  // Si l'init échoue, tmp_ip est mise à zéro, on l'affecte quand même à la station
+  st->ip = tmp_ip;
+}
+else // Sinon, on considère que l'IP est invalide
+{
+  // On met manuellement une IP vide dans la station
+  st->ip = (ip_address_t){{0, 0, 0, 0}, 0};
+  
+  // Et on retourne un échec
+  return EXIT_FAILURE;
+}
+
 
   // Tente d'initialiser tmp_ma à partir de la chaîne 'mac'.
   // Le bloc 'if' est exécuté si init_mac_address_t retourne une valeur non nulle (échec).

@@ -23,13 +23,12 @@ void afficher_ip_t(const ip_address_t *ip)
 }
 
 // Fonction pour initialiser une structure ip_address_t à partir d'une chaîne de caractères.
-// Prend en argument un pointeur vers la structure ip_address_t à initialiser et une chaîne de caractères représentant l'adresse IP (ex: "192.168.1.1/24").
+// Prend en argument un pointeur vers la structure ip_address_t à initialiser et une chaîne de caractères représentant l'adresse IP (ex: "192.168.1.1/24") <- c' est juste exemlple.
 // Retourne EXIT_SUCCESS en cas de succès, EXIT_FAILURE en cas d'erreur.
 int init_ip_address_t(ip_address_t *ip, const char *ip_char)
 {
   // Déclaration d'une structure temporaire pour stocker les valeurs parsées.
   ip_address_t tmp;
-
   // Tente de parser la chaîne de caractères `ip_char` pour extraire les 4 octets de l'IP et le masque.
   // Le format attendu est "o1.o2.o3.o4/masque".
   // `sscanf` retourne le nombre d'éléments correctement assignés.

@@ -6,10 +6,15 @@
 void init_trame_ethernet(trame_ethernet_t *trame, const mac_address_t *src,
                          const mac_address_t *dest)
 {
+  //la fonction memcpy copie les octets de l'adresse MAC source et destination
+  //dans la structure trame_ethernet_t, en utilisant sizeof(mac_address_t) pour
+  //déterminer la taille exacte de l'adresse MAC.
   memcpy(&trame->src, src, sizeof(mac_address_t));
   memcpy(&trame->dest, dest, sizeof(mac_address_t));
   trame->type = 0;
   trame->taille_donnees = 0;
+  //memset est utilisée pour initialiser le tableau de données à zéro.
+  //Cela garantit que toutes les données de la trame sont initialisées à zéro,
   memset(trame->donnees, 0, TAILLE_MAX_DONNEES);
 }
 
@@ -38,6 +43,8 @@ void afficher_trame_hex(const trame_ethernet_t *trame)
   // MAC destination
   for (int i = 0; i < 6; i++)
   {
+    //%02X affiche chaque octet de l'adresse MAC destination en hexadécimal
+    // avec deux chiffres, en ajoutant un zéro devant si nécessaire.
     printf("%02X ", trame->dest.octet[i]);
   }
 
@@ -55,6 +62,9 @@ void afficher_trame_hex(const trame_ethernet_t *trame)
   for (int i = 0; i < trame->taille_donnees; i++)
   {
     printf("%02X ", trame->donnees[i]);
+
+    // Affiche les données en hexadécimal, 16 octets par ligne
+    // %02X affiche chaque octet en hexadécimal avec deux chiffres.
     if ((i + 1) % 16 == 0)
       printf("\n");
   }
