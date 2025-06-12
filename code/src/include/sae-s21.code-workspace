@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"name": "SSH FS - sterne",
+			"uri": "ssh://sterne/adhome/a/ab/abdoualev"
+		}
+	],
+	"settings": {}
+}
