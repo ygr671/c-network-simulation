@@ -230,101 +230,134 @@ void ajouter_lien_t(reseau_t *rs, char *lien)
 }
 
 void envoyer_trame_vers_port(reseau_t *rs, int id_switch, int port,
-                            const trame_ethernet_t *trame) {
-    printf("Switch %d : Tentative d'envoi sur le port %d\n", id_switch, port);
+                             const trame_ethernet_t *trame)
+{
+  printf("Switch %d : Tentative d'envoi sur le port %d\n", id_switch, port);
 
-    // Parcourir les liens pour trouver l'équipement connecté au port
-    for (int i = 0; i < rs->nb_liens; i++) {
-        if (rs->liens[i].id1 == id_switch) {
-            if (port == rs->liens[i].id2) {
-                printf("  -> Lien trouvé vers équipement %d\n", rs->liens[i].id2);
+  // Parcourir les liens pour trouver l'équipement connecté au port
+  for (int i = 0; i < rs->nb_liens; i++)
+  {
+    if (rs->liens[i].id1 == id_switch)
+    {
+      if (port == rs->liens[i].id2)
+      {
+        printf("  -> Lien trouvé vers équipement %d\n", rs->liens[i].id2);
 
-                // Trouver l'équipement connecté
-                for (int j = 0; j < rs->nb_equipements; j++) {
-                    if (rs->equipements[j].id == rs->liens[i].id2) {
-                        if (rs->equipements[j].type == SWITCH) {
-                            printf("  -> Transmission vers switch %d\n", rs->equipements[j].id);
-                            traiter_trame_switch(rs, rs->equipements[j].id, trame, rs->liens[i].id1);
-                        } else if (rs->equipements[j].type == STATION) {
-                            // Si c'est une station, vérifier si la trame lui est destinée
-                            int is_broadcast = memcmp(&trame->dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 0;
-                            int is_for_this_station = memcmp(&rs->equipements[j].contenu.st.mac,
-                                                           &trame->dest,
-                                                           sizeof(mac_address_t)) == 0;
-
-                            if (is_broadcast || is_for_this_station) {
-                                printf("  -> Trame acceptée par la station %d\n", rs->equipements[j].id);
-                                afficher_trame(trame);
-                            } else {
-                                printf("  -> Trame ignorée par la station %d (MAC ne correspond pas)\n",
-                                     rs->equipements[j].id);
-                            }
-                        }
-                        break;
-                    }
-                }
+        // Trouver l'équipement connecté
+        for (int j = 0; j < rs->nb_equipements; j++)
+        {
+          if (rs->equipements[j].id == rs->liens[i].id2)
+          {
+            if (rs->equipements[j].type == SWITCH)
+            {
+              printf("  -> Transmission vers switch %d\n",
+                     rs->equipements[j].id);
+              traiter_trame_switch(rs, rs->equipements[j].id, trame,
+                                   rs->liens[i].id1);
             }
+            else if (rs->equipements[j].type == STATION)
+            {
+              // Si c'est une station, vérifier si la trame lui est destinée
+              int is_broadcast =
+                  memcmp(&trame->dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 0;
+              int is_for_this_station =
+                  memcmp(&rs->equipements[j].contenu.st.mac, &trame->dest,
+                         sizeof(mac_address_t)) == 0;
+
+              if (is_broadcast || is_for_this_station)
+              {
+                printf("  -> Trame acceptée par la station %d\n",
+                       rs->equipements[j].id);
+                afficher_trame(trame);
+              }
+              else
+              {
+                printf("  -> Trame ignorée par la station %d (MAC ne "
+                       "correspond pas)\n",
+                       rs->equipements[j].id);
+              }
+            }
+            break;
+          }
         }
+      }
     }
+  }
 }
 
-void traiter_trame_switch(reseau_t *rs, int id_switch, const trame_ethernet_t *trame,
-                         int port_entree) {
-    equipement_t *switch_eq = &rs->equipements[id_switch];
+void traiter_trame_switch(reseau_t *rs, int id_switch,
+                          const trame_ethernet_t *trame, int port_entree)
+{
+  equipement_t *switch_eq = &rs->equipements[id_switch];
 
-    // Apprentissage : associer l'adresse MAC source au port d'entrée
-    entree_table_commutation_t nouvelle_entree = {
-        .port = port_entree,
-        .ma = trame->src
-    };
+  // Apprentissage : associer l'adresse MAC source au port d'entrée
+  entree_table_commutation_t nouvelle_entree = {.port = port_entree,
+                                                .ma = trame->src};
 
-    // Vérifier si l'entrée existe déjà
-    int existe = 0;
-    for (int i = 0; i < switch_eq->contenu.sw.tc.nb_entree; i++) {
-        if (memcmp(&switch_eq->contenu.sw.tc.entrees[i].ma, &trame->src, sizeof(mac_address_t)) == 0) {
-            existe = 1;
-            switch_eq->contenu.sw.tc.entrees[i].port = port_entree;
-            break;
-        }
+  // Vérifier si l'entrée existe déjà
+  int existe = 0;
+  for (int i = 0; i < switch_eq->contenu.sw.tc.nb_entree; i++)
+  {
+    if (memcmp(&switch_eq->contenu.sw.tc.entrees[i].ma, &trame->src,
+               sizeof(mac_address_t)) == 0)
+    {
+      existe = 1;
+      switch_eq->contenu.sw.tc.entrees[i].port = port_entree;
+      break;
     }
+  }
 
-    if (!existe) {
-        ajouter_entree_table_commutation(&switch_eq->contenu.sw.tc, nouvelle_entree);
-    }
+  if (!existe)
+  {
+    ajouter_entree_table_commutation(&switch_eq->contenu.sw.tc,
+                                     nouvelle_entree);
+  }
 
-    // Si c'est une trame broadcast
-    if (memcmp(&trame->dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 0) {
-        // Envoyer sur tous les ports sauf celui d'entrée
-        for (int i = 0; i < rs->nb_liens; i++) {
-            if (rs->liens[i].id1 == id_switch && rs->liens[i].id2 != port_entree) {
-                envoyer_trame_vers_port(rs, id_switch, rs->liens[i].id2, trame);
-            }
-        }
-        return;
+  // Si c'est une trame broadcast
+  if (memcmp(&trame->dest, "\xFF\xFF\xFF\xFF\xFF\xFF", 6) == 0)
+  {
+    // Envoyer sur tous les ports sauf celui d'entrée
+    for (int i = 0; i < rs->nb_liens; i++)
+    {
+      if (rs->liens[i].id1 == id_switch && rs->liens[i].id2 != port_entree)
+      {
+        envoyer_trame_vers_port(rs, id_switch, rs->liens[i].id2, trame);
+      }
     }
+    return;
+  }
 
-    // Chercher le port de destination
-    int port_dest = -1;
-    for (int i = 0; i < rs->nb_liens; i++) {
-        if (rs->liens[i].id1 == id_switch) {
-            int id_equip = rs->liens[i].id2;
-            if (rs->equipements[id_equip].type == STATION &&
-                memcmp(&rs->equipements[id_equip].contenu.st.mac, &trame->dest, sizeof(mac_address_t)) == 0) {
-                port_dest = id_equip;
-                break;
-            }
-        }
+  // Chercher le port de destination
+  int port_dest = -1;
+  for (int i = 0; i < rs->nb_liens; i++)
+  {
+    if (rs->liens[i].id1 == id_switch)
+    {
+      int id_equip = rs->liens[i].id2;
+      if (rs->equipements[id_equip].type == STATION &&
+          memcmp(&rs->equipements[id_equip].contenu.st.mac, &trame->dest,
+                 sizeof(mac_address_t)) == 0)
+      {
+        port_dest = id_equip;
+        break;
+      }
     }
+  }
 
-    // Si on a trouvé le port de destination
-    if (port_dest != -1) {
-        envoyer_trame_vers_port(rs, id_switch, port_dest, trame);
-    } else {
-        // Si on ne connait pas la destination, faire un broadcast
-        for (int i = 0; i < rs->nb_liens; i++) {
-            if (rs->liens[i].id1 == id_switch && rs->liens[i].id2 != port_entree) {
-                envoyer_trame_vers_port(rs, id_switch, rs->liens[i].id2, trame);
-            }
-        }
+  // Si on a trouvé le port de destination
+  if (port_dest != -1)
+  {
+    envoyer_trame_vers_port(rs, id_switch, port_dest, trame);
+  }
+  else
+  {
+    // Si on ne connait pas la destination, faire un broadcast
+    for (int i = 0; i < rs->nb_liens; i++)
+    {
+      if (rs->liens[i].id1 == id_switch && rs->liens[i].id2 != port_entree)
+      {
+        envoyer_trame_vers_port(rs, id_switch, rs->liens[i].id2, trame);
+      }
     }
+  }
 }
