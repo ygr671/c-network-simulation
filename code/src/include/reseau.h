@@ -4,6 +4,7 @@
 #include "mac.h"
 #include "station.h"
 #include "switch.h"
+#include "trame.h"
 
 // Structure pour représenter un lien
 typedef struct
@@ -65,3 +66,8 @@ void afficher_lien_t(const lien_t *ln);
 void afficher_equipement_t(const equipement_t *eq);
 
 void ajouter_equipement_t(reseau_t *rs, char *eq_desc);
+
+void traiter_trame_switch(reseau_t *rs, int id_switch, const trame_ethernet_t *trame, int port_entree);
+
+void envoyer_trame_vers_port(reseau_t *rs, int id_switch, int port, const trame_ethernet_t *trame);
+

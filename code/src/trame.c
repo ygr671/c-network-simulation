@@ -1,8 +1,17 @@
 #include "include/trame.h"
 #include <arpa/inet.h> // Pour htons()
+#include <arpa/inet.h> // Pour htons()
 #include <stdio.h>
 #include <string.h>
 
+void init_trame_ethernet(trame_ethernet_t *trame, const mac_address_t *src,
+                         const mac_address_t *dest)
+{
+  memcpy(&trame->src, src, sizeof(mac_address_t));
+  memcpy(&trame->dest, dest, sizeof(mac_address_t));
+  trame->type = 0;
+  trame->taille_donnees = 0;
+  memset(trame->donnees, 0, TAILLE_MAX_DONNEES);
 void init_trame_ethernet(trame_ethernet_t *trame, const mac_address_t *src,
                          const mac_address_t *dest)
 {

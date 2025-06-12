@@ -5,6 +5,7 @@
 #include "include/table_commutation.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define CAPACITE_INITIALE 8
 #define TAILLE_BUFFER 256
@@ -227,3 +228,114 @@ void ajouter_lien_t(reseau_t *rs, char *lien)
   rs->liens[rs->index_lien_actuel] = ln;
   rs->index_lien_actuel++;
 }
+
+void envoyer_trame_vers_port(reseau_t *rs, int id_switch, int port, const trame_ethernet_t *trame)
+{
+  // Parcourir les liens pour trouver celui qui part du switch sur ce port
+  for (int i = 0; i < rs->nb_liens; i++)
+  {
+    lien_t ln = rs->liens[i];
+
+    int autre_id = -1;
+
+    if (ln.id1 == id_switch)
+    {
+      autre_id = ln.id2;
+    }
+    else if (ln.id2 == id_switch)
+    {
+      autre_id = ln.id1;
+    }
+
+    // Ici, on simule que chaque port est associé à un lien unique
+    if (autre_id != -1 && port == i)
+    {
+      equipement_t *eq = &rs->equipements[autre_id];
+
+      switch (eq->type)
+      {
+      case SWITCH:
+        printf("[Switch %d] --> Switch %d (port %d)\n", id_switch, autre_id, port);
+        traiter_trame_switch(rs, autre_id, trame, port);
+        break;
+
+      case STATION:
+        // Si la station est concernée par la trame (adresse MAC correspond)
+        if (memcmp(eq->contenu.st.mac.octet, trame->dest.octet, 6) == 0 ||
+            // Diffusion (MAC FF:FF:FF:FF:FF:FF)
+            memcmp(trame->dest.octet, (unsigned char[]){0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 6) == 0)
+        {
+          printf("[Switch %d] --> Station %d : trame reçue !\n", id_switch, autre_id);
+        }
+        else
+        {
+          printf("[Switch %d] --> Station %d : trame ignorée.\n", id_switch, autre_id);
+        }
+        break;
+
+      default:
+        fprintf(stderr, "Type d'équipement inconnu\n");
+        break;
+      }
+
+      break; // Un seul lien doit correspondre au port
+    }
+  }
+}
+
+void traiter_trame_switch(reseau_t *rs, int id_switch, const trame_ethernet_t *trame, int port_entree)
+{
+  switch_t *sw = &rs->equipements[id_switch].contenu.sw;
+
+  // Apprentissage de la MAC source
+  table_commutation_t *tc = &sw->tc;
+  int trouve = 0;
+  for (int i = 0; i < tc->nb_entree; i++)
+  {
+    if (memcmp(tc->entrees[i].ma.octet, trame->src.octet, 6) == 0)
+    {
+      trouve = 1;
+      break;
+    }
+  }
+
+  if (!trouve)
+  {
+    entree_table_commutation_t nouvelle = {
+        .ma = trame->src,
+        .port = port_entree};
+    ajouter_entree_table_commutation(tc, nouvelle);
+    printf("[Switch %d] Apprentissage : ", id_switch);
+    afficher_mac(&trame->src);
+    printf(" sur port %d\n", port_entree);
+  }
+
+  // Recherche destination
+  int port_sortie = -1;
+  for (int i = 0; i < tc->nb_entree; i++)
+  {
+    if (memcmp(tc->entrees[i].ma.octet, trame->dest.octet, 6) == 0)
+    {
+      port_sortie = tc->entrees[i].port;
+      break;
+    }
+  }
+
+  if (port_sortie != -1)
+  {
+    printf("[Switch %d] Transmission unicast vers port %d\n", id_switch, port_sortie);
+    envoyer_trame_vers_port(rs, id_switch, port_sortie, trame);
+  }
+  else
+  {
+    printf("[Switch %d] Diffusion de la trame\n", id_switch);
+    for (int p = 0; p < sw->nb_ports; p++)
+    {
+      if (p != port_entree)
+      {
+        envoyer_trame_vers_port(rs, id_switch, p, trame);
+      }
+    }
+  }
+}
+

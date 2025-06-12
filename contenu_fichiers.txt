@@ -1,0 +1,1147 @@
+
+===== ./README.md =====
+
+# SAÉ Reseau S21-M23
+
+## Membres du groupe
+- [Omar Farouk LASFAR](https://github.com/olasfar)
+- [Muhammed Emin ERDAL](https://github.com/ygr671)
+- [Ramzan ABDOULAEV](https://github.com/BorZa-45)
+
+## Objectifs
+- Représenter et simuler un réseau configuré dans un fichier chargé en amont
+- Faire transiter des messages entre les différents équipements d'un réseau
+- Faire une simulation du protocole Ethernet et à terme, du protocole STP (Spanning Tree Protocol)
+
+## Objectifs atteints
+- [x] : Création de toutes les structures de données nécessaires pour la représentation du réseau
+    - NB : Il manque les éléments pour la transmission, le stockage et la simulation de messages + protocole STP
+- [x] : Chargement du fichier de configuration
+    - NB : Il manque l'ajout des liens dans les tables de commutation des switches reliés aux équipements correspondants
+    - EDIT 03-06-2025 : la création du réseau représentant l'état initial à l'instant t = 0, la table de commutation est par définition vide car aucune donnée n'y transite en premier lieu.
+
+===== ./code/format-code.sh =====
+
+#!/bin/bash
+
+# Programme qui exécute le formatage automatique du code selon le fichier .clang-format
+# Actuellement bugué (à fix)
+
+echo "Formatage en cours"
+find . -type f \( -name "*.c" -o -name "*.h" \) | xargs clang-format -i
+echo "Formatage terminé"
+
+===== ./code/Makefile =====
+
+# Nom de l'exécutable final
+TARGET = bin/main
+
+# Répertoires
+SRC_DIR = src
+INC_DIR = $(SRC_DIR)/include
+BUILD_DIR = build
+
+# Fichiers sources et objets
+SRCS = $(wildcard $(SRC_DIR)/*.c)
+OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SRCS))
+
+# Compilateur et options
+CC = gcc
+CFLAGS = -Wall -Wextra -Werror -pedantic -I$(INC_DIR)
+LDFLAGS = # -fsanitize=address
+
+# Cible principale
+all: $(TARGET) run
+
+# Edition de liens
+$(TARGET): $(OBJS)
+	@mkdir -p $(dir $@)
+	$(CC) $(OBJS) -o $@ $(LDFLAGS)
+
+# Compilation des .o
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Nettoyage
+clean:
+	rm -rf $(BUILD_DIR)/*.o $(TARGET)
+
+# Lancement du programme compilé
+run:
+	$(TARGET)
+
+.PHONY: all clean
+
+
+===== ./code/src/include/config.h =====
+
+#pragma once
+
+#include "reseau.h"
+
+void charger_configuration(reseau_t *rs, const char *path);
+
+===== ./code/src/include/station.h =====
+
+#pragma once
+
+#include "ip.h"
+#include "mac.h"
+// Structure pour une station
+typedef struct
+{
+  ip_address_t ip;
+  mac_address_t mac;
+} station_t;
+
+void afficher_station(const station_t *st);
+
+int init_station_t(station_t *st, const char *ip, const char *mac);
+
+===== ./code/src/include/switch.h =====
+
+#pragma once
+
+#include "mac.h"
+#include "table_commutation.h"
+
+// Énumération pour les états de ports
+typedef enum
+{
+  ROOT,
+  DESIGNATED,
+  BLOCKED
+} etat_port_t;
+
+// Structure pour un switch
+typedef struct
+{
+  mac_address_t ma;
+  unsigned short nb_ports;
+  etat_port_t *etat_ports;
+  // TODO ajouter état + rôle des ports aussi + un truc pour stocker/gérer les
+  // messages
+  unsigned short priorite_stp;
+  table_commutation_t tc;
+} switch_t;
+
+// Fonctions pour switch_t
+void afficher_switch(const switch_t *sw);
+
+void init_switch_t(switch_t *sw, mac_address_t ma, unsigned short priorite_stp);
+
+void deinit_switch_t(switch_t *sw);
+
+===== ./code/src/include/ip.h =====
+
+#pragma once
+
+// Structure pour l'@IP
+typedef struct
+{
+  unsigned char paquet[4];
+  unsigned char masque;
+} ip_address_t;
+
+void afficher_ip_t(const ip_address_t *ip);
+
+int init_ip_address_t(ip_address_t *ip, const char *ip_char);
+
+===== ./code/src/include/reseau.h =====
+
+#pragma once
+
+#include "ip.h"
+#include "mac.h"
+#include "station.h"
+#include "switch.h"
+#include "trame.h"
+
+// Structure pour représenter un lien
+typedef struct
+{
+  unsigned short id1;
+  unsigned short id2;
+  unsigned short poids;
+} lien_t;
+
+// Enum pour le type ici
+typedef enum
+{
+  STATION,
+  SWITCH
+} type_equipement_t;
+
+// Union pour représenter un élément du réseau
+typedef struct
+{
+  type_equipement_t type;
+  unsigned short id;
+  union
+  {
+    station_t st;
+    switch_t sw;
+  } contenu;
+} equipement_t;
+
+// Structure pour représenter un réseau
+typedef struct
+{
+  equipement_t *equipements;
+  unsigned short nb_equipements;
+  unsigned short index_equipement_actuel;
+  unsigned short capacite_equipements;
+
+  lien_t *liens;
+  unsigned short nb_liens;
+  unsigned short index_lien_actuel;
+  unsigned short capacite_liens;
+} reseau_t;
+
+void init_reseau_t(reseau_t *rs);
+
+void deinit_reseau_t(reseau_t *rs);
+
+void afficher_reseau_t(const reseau_t *rs);
+
+void ajouter_lien_t(reseau_t *rs, char *lien);
+
+void ajouter_station_t(reseau_t *rs, station_t st);
+/*
+ * Pas sur pour celui-ci
+void supprimer_lien_t(reseau_t * rs);
+*/
+
+void afficher_lien_t(const lien_t *ln);
+
+void afficher_equipement_t(const equipement_t *eq);
+
+void ajouter_equipement_t(reseau_t *rs, char *eq_desc);
+
+void traiter_trame_switch(reseau_t *rs, int id_switch, const trame_ethernet_t *trame, int port_entree);
+
+void envoyer_trame_vers_port(reseau_t *rs, int id_switch, int port, const trame_ethernet_t *trame);
+
+
+===== ./code/src/include/trame.h =====
+
+#pragma once
+
+#include "mac.h"
+#include <stdint.h>
+
+#define TAILLE_MIN_DONNEES 46
+#define TAILLE_MAX_DONNEES 1500
+
+typedef struct
+{
+  mac_address_t dest;                  // MAC destination (6 octets)
+  mac_address_t src;                   // MAC source (6 octets)
+  uint16_t type;                       // Type Ethernet (2 octets)
+  uint8_t donnees[TAILLE_MAX_DONNEES]; // Payload (jusqu'à 1500 octets)
+  uint16_t taille_donnees;             // Taille réelle des données
+} trame_ethernet_t;
+
+/**
+ * Initialise une trame Ethernet
+ * trame     Pointeur vers la trame à initialiser
+ * src       Adresse MAC source
+ * dest      Adresse MAC destination
+ */
+void init_trame_ethernet(trame_ethernet_t *trame, const mac_address_t *src,
+                         const mac_address_t *dest);
+
+/**
+ * Affiche la trame en format lisible
+ * trame     La trame à afficher
+ */
+void afficher_trame(const trame_ethernet_t *trame);
+
+/**
+ * Affiche le contenu brut de la trame en hexadécimal
+ * trame     La trame à afficher
+ */
+void afficher_trame_hex(const trame_ethernet_t *trame);
+
+===== ./code/src/include/mac.h =====
+
+#pragma once
+
+// Structure pour l'@MAC
+typedef struct
+{
+  unsigned char octet[6];
+} mac_address_t;
+
+void afficher_mac(const mac_address_t *ma);
+
+int init_mac_address_t(mac_address_t *ma, const char *mac_char);
+
+===== ./code/src/include/table_commutation.h =====
+
+#pragma once
+
+#include "mac.h"
+
+// Structure pour une entrée de table de commutation
+typedef struct
+{
+  unsigned short port;
+  mac_address_t ma;
+} entree_table_commutation_t;
+
+typedef struct
+{
+  entree_table_commutation_t *entrees;
+  unsigned short nb_entree;
+  unsigned short capacite;
+} table_commutation_t;
+
+void afficher_entree_table_commutation(const entree_table_commutation_t *etc);
+
+void afficher_table_commutation(const table_commutation_t *tc);
+
+void init_table_commutation_t(table_commutation_t *tc);
+
+void deinit_table_commutation_t(table_commutation_t *tc);
+
+void ajouter_entree_table_commutation(table_commutation_t *tc,
+                                      entree_table_commutation_t etc);
+
+===== ./code/src/trame.c =====
+
+#include "include/trame.h"
+#include <arpa/inet.h> // Pour htons()
+#include <stdio.h>
+#include <string.h>
+
+void init_trame_ethernet(trame_ethernet_t *trame, const mac_address_t *src,
+                         const mac_address_t *dest)
+{
+  memcpy(&trame->src, src, sizeof(mac_address_t));
+  memcpy(&trame->dest, dest, sizeof(mac_address_t));
+  trame->type = 0;
+  trame->taille_donnees = 0;
+  memset(trame->donnees, 0, TAILLE_MAX_DONNEES);
+}
+
+void afficher_trame(const trame_ethernet_t *trame)
+{
+  printf("=== Trame Ethernet Simplifiée ===\n");
+
+  printf("Destination: ");
+  for (int i = 0; i < 6; i++)
+  {
+    printf("%02X", trame->dest.octet[i]);
+    if (i < 5)
+      printf(":");
+  }
+
+  printf("\nSource:      ");
+  for (int i = 0; i < 6; i++)
+  {
+    printf("%02X", trame->src.octet[i]);
+    if (i < 5)
+      printf(":");
+  }
+
+  printf("\nType:        0x%04X", ntohs(trame->type));
+  printf("\nTaille données: %u octets\n", trame->taille_donnees);
+}
+
+void afficher_trame_hex(const trame_ethernet_t *trame)
+{
+  // Afficher l'en-tête (dest + src + type)
+  printf("En-tête (14 octets):\n");
+
+  // MAC destination
+  for (int i = 0; i < 6; i++)
+  {
+    printf("%02X ", trame->dest.octet[i]);
+  }
+
+  // MAC source
+  for (int i = 0; i < 6; i++)
+  {
+    printf("%02X ", trame->src.octet[i]);
+  }
+
+  // Type
+  printf("%02X %02X", (ntohs(trame->type) >> 8) & 0xFF,
+         ntohs(trame->type) & 0xFF);
+
+  // Données
+  printf("\n\nDonnées (%d octets):\n", trame->taille_donnees);
+  for (int i = 0; i < trame->taille_donnees; i++)
+  {
+    printf("%02X ", trame->donnees[i]);
+    if ((i + 1) % 16 == 0)
+      printf("\n");
+  }
+  printf("\n");
+}
+
+===== ./code/src/ip.c =====
+
+#include "include/ip.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+void afficher_ip_t(const ip_address_t *ip)
+{
+  for (unsigned int i = 0; i < 4; i++)
+  {
+    printf("%d", ip->paquet[i]);
+    if (i < 3)
+      printf(".");
+  }
+  printf("/%d\n", ip->masque);
+}
+
+int init_ip_address_t(ip_address_t *ip, const char *ip_char)
+{
+  ip_address_t tmp;
+  // Extraire chaque octet de l'adresse IP
+  if (sscanf(ip_char, "%hhu.%hhu.%hhu.%hhu/%hhu", &tmp.paquet[0],
+             &tmp.paquet[1], &tmp.paquet[2], &tmp.paquet[3], &tmp.masque) != 5)
+  {
+    fprintf(stderr,
+            "Erreur dans le sscanf() de init_ip_address_t() : mise à 0\n");
+    // 0 partout si échec
+    for (size_t i = 0; i < 4; i++)
+    {
+      ip->paquet[i] = 0;
+    }
+    ip->masque = 0;
+
+    return EXIT_FAILURE;
+  }
+  if (tmp.masque > 32 || tmp.masque < 1)
+  {
+    fprintf(stderr, "Erreur : le masque doit être valide, mise à 0\n");
+    // 0 partout si échec
+    for (size_t i = 0; i < 4; i++)
+    {
+      ip->paquet[i] = 0;
+    }
+    ip->masque = 0;
+    return EXIT_FAILURE;
+  }
+
+  for (size_t i = 0; i < 4; i++)
+  {
+    ip->paquet[i] = tmp.paquet[i];
+  }
+  ip->masque = tmp.masque;
+
+  return EXIT_SUCCESS;
+}
+
+===== ./code/src/main.c =====
+
+#include <arpa/inet.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Headers
+
+#include "include/config.h"
+#include "include/reseau.h"
+#include "include/trame.h"
+
+int main(void)
+{
+  reseau_t rs;
+
+  init_reseau_t(&rs);
+
+  charger_configuration(&rs, "configurations/lan1.lan");
+
+  printf("Configuration chargée !\n");
+
+  afficher_reseau_t(&rs);
+
+  trame_ethernet_t trame;
+  mac_address_t src = {{0x00, 0x1A, 0x2B, 0x3C, 0x4D, 0x5E}};
+  mac_address_t dest = {{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}}; // Broadcast
+
+  init_trame_ethernet(&trame, &src, &dest);
+  trame.type = htons(0x0800); // IPv4
+
+  // Ajouter des données de test
+  const char *message = "Hello Ethernet!";
+  memcpy(trame.donnees, message, strlen(message));
+  trame.taille_donnees = strlen(message);
+
+  afficher_trame(&trame);
+  printf("\n");
+  afficher_trame_hex(&trame);
+
+  deinit_reseau_t(&rs);
+
+  return EXIT_SUCCESS;
+}
+
+===== ./code/src/station.c =====
+
+#include "include/station.h"
+#include "include/ip.h"
+#include "include/mac.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+void afficher_station(const station_t *st)
+{
+  printf("IP : ");
+  afficher_ip_t(&st->ip);
+  printf("\nMAC : ");
+  afficher_mac(&st->mac);
+}
+
+int init_station_t(station_t *st, const char *ip, const char *mac)
+{
+  ip_address_t tmp_ip;
+  mac_address_t tmp_ma;
+
+  if (init_ip_address_t(&tmp_ip, ip))
+  {
+    st->ip = tmp_ip;
+  }
+  else
+  {
+    st->ip = (ip_address_t){{0, 0, 0, 0}, 0};
+    return EXIT_FAILURE;
+  }
+
+  if (init_mac_address_t(&tmp_ma, mac))
+  {
+    st->mac = tmp_ma;
+  }
+  else
+  {
+    st->mac = (mac_address_t){{0, 0, 0, 0}};
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
+}
+
+===== ./code/src/table_commutation.c =====
+
+#include "include/table_commutation.h"
+#include "include/mac.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+void afficher_entree_table_commutation(const entree_table_commutation_t *etc)
+{
+  printf("%d:", etc->port);
+  afficher_mac(&etc->ma);
+}
+
+void init_table_commutation_t(table_commutation_t *tc)
+{
+  tc->capacite = 8; // On garantie une capacité de 8 entrées à l'initialisation
+  tc->nb_entree = 0;
+  tc->entrees = malloc(tc->capacite * sizeof(entree_table_commutation_t));
+  if (tc->entrees == NULL)
+  {
+    fprintf(stderr, "malloc dans init_table_commutation_t !\n");
+    exit(EXIT_FAILURE);
+  }
+}
+
+void deinit_table_commutation_t(table_commutation_t *tc)
+{
+  free(tc->entrees);
+  tc->entrees = NULL;
+}
+
+void ajouter_entree_table_commutation(table_commutation_t *tc,
+                                      entree_table_commutation_t etc)
+{
+  // TODO : vérifier si l'entrée est valide par je ne sais quel moyen
+
+  // Vérification de la taille du tableau d'entrées, l'agrandir si nécessaire
+  if (tc->nb_entree == tc->capacite)
+  {
+    tc->capacite *= 2; // On double la capacité du tableau
+    tc->entrees =
+        realloc(tc->entrees, tc->capacite * sizeof(entree_table_commutation_t));
+    // Vérification de la bonne exécution de la réallocation
+    if (tc->entrees == NULL)
+    {
+      fprintf(stderr,
+              "Erreur realloc() dans ajouter_entree_table_commutation !\n");
+      perror("realloc : ");
+      exit(EXIT_FAILURE);
+    }
+  }
+  tc->entrees[tc->nb_entree] = etc;
+  tc->nb_entree++;
+}
+
+void afficher_table_commutation(const table_commutation_t *tc)
+{
+  if (tc == NULL || tc->nb_entree == 0)
+  {
+    printf("Table de commmutation vide.\n");
+    return;
+  }
+
+  for (unsigned short i = 0; i < tc->nb_entree; i++)
+  {
+    afficher_entree_table_commutation(&tc->entrees[i]);
+  }
+}
+
+===== ./code/src/switch.c =====
+
+#include "include/switch.h"
+#include "include/ip.h"
+#include "include/mac.h"
+#include "include/table_commutation.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+void afficher_switch(const switch_t *sw)
+{
+  printf("MAC : ");
+  afficher_mac(&sw->ma);
+  printf("Nombre de ports : %u\n", sw->nb_ports);
+  printf("Priorité STP : %u\n", sw->priorite_stp);
+  printf("Table de commutation : ");
+  afficher_table_commutation(&sw->tc);
+}
+
+void init_switch_t(switch_t *sw, mac_address_t ma, unsigned short priorite_stp)
+{
+  sw->ma = ma;
+  sw->nb_ports = 0;
+  sw->priorite_stp = priorite_stp;
+  init_table_commutation_t(&sw->tc);
+}
+
+void deinit_switch_t(switch_t *sw)
+{
+  deinit_table_commutation_t(&sw->tc);
+  free(sw->etat_ports);
+  sw->etat_ports = NULL;
+}
+
+===== ./code/src/mac.c =====
+
+#include "include/mac.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+void afficher_mac(const mac_address_t *ma)
+{
+  for (unsigned int i = 0; i < 6; i++)
+  {
+    printf("%02X", ma->octet[i]);
+    if (i < 5)
+      printf(":");
+  }
+}
+
+int init_mac_address_t(mac_address_t *ma, const char *mac_char)
+{
+  mac_address_t tmp;
+  // Extraire chaque octet de l'adresse IP
+  if (sscanf(mac_char, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx", &tmp.octet[0],
+             &tmp.octet[1], &tmp.octet[2], &tmp.octet[3], &tmp.octet[4],
+             &tmp.octet[5]) != 6)
+  {
+    fprintf(stderr,
+            "Erreur dans le sscanf() de init_mac_address_t() : mise à 0\n");
+    // 0 partout si échec
+    for (size_t i = 0; i < 6; i++)
+    {
+      ma->octet[i] = 0;
+    }
+    return EXIT_FAILURE;
+  }
+  for (size_t i = 0; i < 6; i++)
+  {
+    ma->octet[i] = tmp.octet[i];
+  }
+  return EXIT_SUCCESS;
+}
+
+===== ./code/src/reseau.c =====
+
+#include "include/reseau.h"
+#include "include/mac.h"
+#include "include/station.h"
+#include "include/switch.h"
+#include "include/table_commutation.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define CAPACITE_INITIALE 8
+#define TAILLE_BUFFER 256
+
+void init_reseau_t(reseau_t *rs)
+{
+  // Le réseau pourra contenir jusqu'à CAPACITE_INITIALE équipements
+  // initialement Il en est de même pour les liens
+  rs->nb_equipements = 0;
+  rs->index_equipement_actuel = 0;
+  rs->capacite_equipements = CAPACITE_INITIALE;
+
+  rs->equipements =
+      malloc(rs->capacite_equipements *
+             sizeof(equipement_t)); // Pas de calloc() dans le code pour une
+                                    // lecture plus intuitive
+  if (rs->equipements == NULL)
+  {
+    perror("malloc (init_reseau_t -> equipements) : ");
+    exit(EXIT_FAILURE);
+  }
+
+  rs->nb_liens = 0;
+  rs->index_lien_actuel = 0;
+  rs->capacite_liens = CAPACITE_INITIALE;
+
+  rs->liens = malloc(rs->capacite_liens * sizeof(lien_t));
+  if (rs->liens == NULL)
+  {
+    perror("malloc (init_reseau_t -> liens) : ");
+    free(rs->equipements);
+    exit(EXIT_FAILURE);
+  }
+}
+
+void deinit_reseau_t(reseau_t *rs)
+{
+  // Mise à zéro et libération de la mémoire allouée
+
+  // Libération de la mémoire allouée dans les équipements (ex : les tables de
+  // commutation des switch)
+  for (size_t i = 0; i < rs->nb_equipements; i++)
+  {
+    if (rs->equipements[i].type == SWITCH)
+    {
+      deinit_table_commutation_t(&rs->equipements[i].contenu.sw.tc);
+      free(rs->equipements[i].contenu.sw.etat_ports);
+      rs->equipements[i].contenu.sw.etat_ports = NULL;
+    }
+  }
+
+  rs->capacite_equipements = 0;
+  rs->capacite_liens = 0;
+  rs->nb_equipements = 0;
+  rs->nb_liens = 0;
+  free(rs->equipements);
+  rs->equipements = NULL;
+  free(rs->liens);
+  rs->liens = NULL;
+}
+
+void afficher_reseau_t(const reseau_t *rs)
+{
+  // Afficher le contenu d'un réseau (équipements, liens, etc)
+  printf("=== Réseau ===\n");
+  printf("Nombre d'équipements : %hu\n", rs->nb_equipements);
+
+  for (size_t i = 0; i < rs->nb_equipements; i++)
+  {
+    afficher_equipement_t(&rs->equipements[i]);
+  }
+
+  printf("\n");
+
+  printf("Nombre de liens : %hu\n", rs->nb_liens);
+  for (size_t i = 0; i < rs->nb_liens; i++)
+  {
+    afficher_lien_t(&rs->liens[i]);
+  }
+  printf("\n");
+}
+
+void afficher_equipement_t(const equipement_t *eq)
+{
+  // Afficher un équipement selon son type défini dans la structure via
+  // l'énumération
+  switch (eq->type)
+  {
+  case STATION:
+    printf("ID : %hu\nType : Station\nAdresse IP : ", eq->id);
+    afficher_ip_t(&eq->contenu.st.ip);
+    printf("Adresse MAC : ");
+    afficher_mac(&eq->contenu.st.mac);
+    printf("\n");
+    break;
+  case SWITCH:
+    printf("ID : %hu\nType : Switch\nAdresse MAC : ", eq->id);
+    afficher_mac(&eq->contenu.sw.ma);
+    printf(
+        "\nNombre de ports : %hu\nPriorité STP : %hu\nTable de commutation :\n",
+        eq->contenu.sw.nb_ports, eq->contenu.sw.priorite_stp);
+    afficher_table_commutation(&eq->contenu.sw.tc);
+    break;
+  default:
+    fprintf(stderr, "Erreur : type d'équipement inconnu\n");
+    break;
+  }
+}
+
+void afficher_lien_t(const lien_t *ln)
+{
+  printf("ID équipement 1 : %hu\nID équipement 2 : %hu\nPoids : %hu\n", ln->id1,
+         ln->id2, ln->poids);
+}
+
+void ajouter_equipement_t(reseau_t *rs, char *eq_desc)
+{
+  // Variable statique pour pouvoir mettre un ID unique à chaque noeud du réseau
+  static unsigned short id = 0;
+
+  // Parsing de la ligne contenant l'équipement
+  unsigned short eq_type_us;
+
+  type_equipement_t eq_type;
+
+  // Parsing du type pour le switch-case
+  if (sscanf(eq_desc, "%hu", &eq_type_us) != 1)
+    perror("sscanf (ajouter_equipement_t)");
+
+  if (eq_type_us == 1)
+    eq_type = STATION;
+  if (eq_type_us == 2)
+    eq_type = SWITCH;
+
+  equipement_t eq;
+  unsigned short tmp;
+
+  switch (eq_type)
+  {
+  case STATION:
+  {
+    if (sscanf(eq_desc,
+               // 1;54:d6:a6:82:c5:23;130.79.80.21
+               "%hu;%hhx:%hhx:%hhx:%hhx:%hhx:%hhx;%hhu.%hhu.%hhu.%hhu", &tmp,
+               &eq.contenu.st.mac.octet[0], &eq.contenu.st.mac.octet[1],
+               &eq.contenu.st.mac.octet[2], &eq.contenu.st.mac.octet[3],
+               &eq.contenu.st.mac.octet[4], &eq.contenu.st.mac.octet[5],
+               &eq.contenu.st.ip.paquet[0], &eq.contenu.st.ip.paquet[1],
+               &eq.contenu.st.ip.paquet[2], &eq.contenu.st.ip.paquet[3]) != 11)
+    {
+      fprintf(stderr,
+              "sscanf (ajouter_equipement_t) : chaîne d'équipement mal "
+              "formatée\nchaîne fautive : %s \n",
+              eq_desc);
+    }
+    eq.type = eq_type;
+    eq.contenu.st.ip.masque = 24;
+    eq.id = id;
+    rs->equipements[rs->index_equipement_actuel] = eq;
+    rs->index_equipement_actuel++;
+    id++;
+    break;
+  }
+  case SWITCH:
+    if (sscanf(eq_desc, "%hu;%hhx:%hhx:%hhx:%hhx:%hhx:%hhx;%hu;%hu", &tmp,
+               &eq.contenu.sw.ma.octet[0], &eq.contenu.sw.ma.octet[1],
+               &eq.contenu.sw.ma.octet[2], &eq.contenu.sw.ma.octet[3],
+               &eq.contenu.sw.ma.octet[4], &eq.contenu.sw.ma.octet[5],
+               &eq.contenu.sw.nb_ports, &eq.contenu.sw.priorite_stp) != 9)
+    {
+      fprintf(stderr,
+              "sscanf (ajouter_equipement_t) : chaîne d'équipement mal "
+              "formatée\nchaîne fautive : %s\n",
+              eq_desc);
+    }
+    eq.type = eq_type;
+
+    // Bug causé ici : lecture et/ou écriture de mémoire non allouée
+    eq.id = id;
+    rs->equipements[rs->index_equipement_actuel] = eq;
+    init_table_commutation_t(
+        &rs->equipements[rs->index_equipement_actuel].contenu.sw.tc);
+    rs->equipements[rs->index_equipement_actuel].contenu.sw.etat_ports = malloc(
+        rs->equipements[rs->index_equipement_actuel].contenu.sw.nb_ports *
+        sizeof(etat_port_t));
+    rs->index_equipement_actuel++;
+    id++;
+    break;
+  default:
+    // should never occur
+    break;
+  }
+}
+
+void ajouter_lien_t(reseau_t *rs, char *lien)
+{
+  lien_t ln;
+
+  if (sscanf(lien, "%hu;%hu;%hu", &ln.id1, &ln.id2, &ln.poids) != 3)
+  {
+    fprintf(
+        stderr,
+        "scanf (ajouter_lien_t) : erreur de format dans la chaîne à parser\n");
+    fprintf(stderr, "chaîne fautive : '%s'\n", lien);
+    deinit_reseau_t(rs);
+    exit(EXIT_FAILURE);
+  }
+
+  if (rs->index_lien_actuel == rs->capacite_liens)
+  {
+    rs->capacite_liens *= 2;
+    rs->liens = realloc(rs->liens, sizeof(lien_t) * rs->capacite_liens);
+    if (rs->liens == NULL)
+    {
+      perror("realloc (ajouter_lien_t) ");
+      deinit_reseau_t(rs);
+      exit(EXIT_FAILURE);
+    }
+  }
+  rs->liens[rs->index_lien_actuel] = ln;
+  rs->index_lien_actuel++;
+}
+
+void envoyer_trame_vers_port(reseau_t *rs, int id_switch, int port, const trame_ethernet_t *trame)
+{
+  // Parcourir les liens pour trouver celui qui part du switch sur ce port
+  for (int i = 0; i < rs->nb_liens; i++)
+  {
+    lien_t ln = rs->liens[i];
+
+    int autre_id = -1;
+
+    if (ln.id1 == id_switch)
+    {
+      autre_id = ln.id2;
+    }
+    else if (ln.id2 == id_switch)
+    {
+      autre_id = ln.id1;
+    }
+
+    // Ici, on simule que chaque port est associé à un lien unique
+    if (autre_id != -1 && port == i)
+    {
+      equipement_t *eq = &rs->equipements[autre_id];
+
+      switch (eq->type)
+      {
+      case SWITCH:
+        printf("[Switch %d] --> Switch %d (port %d)\n", id_switch, autre_id, port);
+        traiter_trame_switch(rs, autre_id, trame, port);
+        break;
+
+      case STATION:
+        // Si la station est concernée par la trame (adresse MAC correspond)
+        if (memcmp(eq->contenu.st.mac.octet, trame->dest.octet, 6) == 0 ||
+            // Diffusion (MAC FF:FF:FF:FF:FF:FF)
+            memcmp(trame->dest.octet, (unsigned char[]){0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}, 6) == 0)
+        {
+          printf("[Switch %d] --> Station %d : trame reçue !\n", id_switch, autre_id);
+        }
+        else
+        {
+          printf("[Switch %d] --> Station %d : trame ignorée.\n", id_switch, autre_id);
+        }
+        break;
+
+      default:
+        fprintf(stderr, "Type d'équipement inconnu\n");
+        break;
+      }
+
+      break; // Un seul lien doit correspondre au port
+    }
+  }
+}
+
+void traiter_trame_switch(reseau_t *rs, int id_switch, const trame_ethernet_t *trame, int port_entree)
+{
+  switch_t *sw = &rs->equipements[id_switch].contenu.sw;
+
+  // Apprentissage de la MAC source
+  table_commutation_t *tc = &sw->tc;
+  int trouve = 0;
+  for (int i = 0; i < tc->nb_entree; i++)
+  {
+    if (memcmp(tc->entrees[i].ma.octet, trame->src.octet, 6) == 0)
+    {
+      trouve = 1;
+      break;
+    }
+  }
+
+  if (!trouve)
+  {
+    entree_table_commutation_t nouvelle = {
+        .ma = trame->src,
+        .port = port_entree};
+    ajouter_entree_table_commutation(tc, nouvelle);
+    printf("[Switch %d] Apprentissage : ", id_switch);
+    afficher_mac(&trame->src);
+    printf(" sur port %d\n", port_entree);
+  }
+
+  // Recherche destination
+  int port_sortie = -1;
+  for (int i = 0; i < tc->nb_entree; i++)
+  {
+    if (memcmp(tc->entrees[i].ma.octet, trame->dest.octet, 6) == 0)
+    {
+      port_sortie = tc->entrees[i].port;
+      break;
+    }
+  }
+
+  if (port_sortie != -1)
+  {
+    printf("[Switch %d] Transmission unicast vers port %d\n", id_switch, port_sortie);
+    envoyer_trame_vers_port(rs, id_switch, port_sortie, trame);
+  }
+  else
+  {
+    printf("[Switch %d] Diffusion de la trame\n", id_switch);
+    for (int p = 0; p < sw->nb_ports; p++)
+    {
+      if (p != port_entree)
+      {
+        envoyer_trame_vers_port(rs, id_switch, p, trame);
+      }
+    }
+  }
+}
+
+
+===== ./code/src/config.c =====
+
+#include "include/config.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define TAILLE_BUFFER 256
+
+void charger_configuration(reseau_t *rs, const char *path)
+{
+  // Charger les données contenues dans le fichier de configuration se situant
+  // dans path dans le réseau passé en argument
+  FILE *fichier = fopen(path, "r");
+
+  if (fichier == NULL)
+  {
+    perror("fopen (charger_configuration)");
+    deinit_reseau_t(rs);
+    exit(EXIT_FAILURE);
+  }
+
+  char ligne_buffer[TAILLE_BUFFER];
+
+  if (fgets(ligne_buffer, sizeof(ligne_buffer), fichier) != NULL)
+  {
+    // Parsing du nombre d'équipements et du nombre de liens
+    if (sscanf(ligne_buffer, "%hu %hu", &rs->nb_equipements, &rs->nb_liens) !=
+        2)
+    {
+      fprintf(stderr, "Erreur : fichier de configuration malformé\n");
+      deinit_reseau_t(rs);
+      fclose(fichier);
+      exit(EXIT_FAILURE);
+    }
+
+    // Ajout des équipements
+    for (size_t i = 0; i < rs->nb_equipements; i++)
+    {
+      if (fgets(ligne_buffer, sizeof(ligne_buffer), fichier) != NULL)
+      {
+        ajouter_equipement_t(rs, ligne_buffer);
+      }
+      else
+      {
+        fprintf(stderr, "Erreur : nombre de liens incorrect dans le fichier\n");
+        deinit_reseau_t(rs);
+        fclose(fichier);
+        exit(EXIT_FAILURE);
+      }
+    }
+
+    // Ajout des liens
+    for (size_t i = 0; i < rs->nb_liens; i++)
+    {
+      if (fgets(ligne_buffer, sizeof(ligne_buffer), fichier) != NULL)
+      {
+        ajouter_lien_t(rs, ligne_buffer);
+      }
+      else
+      {
+        fprintf(stderr, "Erreur : nombre de liens incorrect dans le fichier\n");
+        deinit_reseau_t(rs);
+        fclose(fichier);
+        exit(EXIT_FAILURE);
+      }
+    }
+  }
+
+  fclose(fichier);
+}
+
+===== ./code/configurations/lan_test.lan =====
+
+4 3
+
+===== ./code/configurations/lan1.lan =====
+
+4 3
+2;01:45:23:a6:f7:ab;8;1024
+1;54:d6:a6:82:c5:23;130.79.80.21
+1;c8:69:72:5e:43:af;130.79.80.27
+1;77:ac:d6:82:12:23;130.79.80.42
+0;1;4
+0;2;19
+0;3;4
+
+===== ./code/CMakeLists.txt =====
+
+cmake_minimum_required(VERSION 3.10)
+project(main C)
+
+# Répertoires
+set(SRC_DIR src)
+set(INC_DIR ${SRC_DIR}/include)
+set(BUILD_DIR build)
+
+# Options de compilation
+set(CMAKE_C_STANDARD 11)
+add_compile_options(-Wall -Wextra -Werror -pedantic)
+
+# Inclure les headers
+include_directories(${INC_DIR})
+
+# Fichiers sources automatiquement
+file(GLOB SRCS ${SRC_DIR}/*.c)
+
+# Déclaration de l'exécutable
+add_executable(main ${SRCS})
+
+# Optionnel : définir le dossier de sortie
+set_target_properties(main PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+)
+
+===== ./TODO.md =====
+
+# TODO
+
+   - [x] `init_reseau_t(reseau_t * rs)`
+   - [x] `deinit_reseau_t(reseau_t * rs)`
+   - [x] `ajouter_station_t(reseau_t * rs, station_t st)`
+   - [x] `ajouter_lien_t(reseau_t * rs, lien_t lien)`
+   - [x] `afficher_reseau(const reseau_t * rs)`
+   - [ ] Utiliser `init_switch_t` dans `config.c` au lieu de manuellement initialiser le `switch_t`.
+   - [ ] Les fonctions `ajouter_station_t` et `ajouter_lien_t` doivent mettre à jour les compteurs `nb_stations` et `nb_liens` du réseau.
+   - [ ] Ajouter vérification que la capacité n’est pas dépassée avant ajout de stations ou de liens.
+   - [ ] Compléter `ajouter_entree_table_commutation` (incomplète : partie après le `*= 2;` absente).
+
+Ajouter une macro de debug légère pour faciliter le suivi de l’exécution.
