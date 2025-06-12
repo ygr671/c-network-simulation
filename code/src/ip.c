@@ -17,8 +17,7 @@ int init_ip_address_t(ip_address_t *ip, const char *ip_char)
 {
   ip_address_t tmp;
   // Extraire chaque octet de l'adresse IP
-  if (sscanf(ip_char, "%hhu.%hhu.%hhu.%hhu/%hhu", &tmp.paquet[0],
-             &tmp.paquet[1], &tmp.paquet[2], &tmp.paquet[3], &tmp.masque) != 5)
+  if (sscanf(ip_char, "%hhu.%hhu.%hhu.%hhu/%hhu", &tmp.paquet[0],&tmp.paquet[1], &tmp.paquet[2], &tmp.paquet[3], &tmp.masque) != 5)
   {
     fprintf(stderr,
             "Erreur dans le sscanf() de init_ip_address_t() : mise à 0\n");

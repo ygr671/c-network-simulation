@@ -27,8 +27,7 @@ void deinit_table_commutation_t(table_commutation_t *tc)
   tc->entrees = NULL;
 }
 
-void ajouter_entree_table_commutation(table_commutation_t *tc,
-                                      entree_table_commutation_t etc)
+void ajouter_entree_table_commutation(table_commutation_t *tc,entree_table_commutation_t etc)
 {
   // TODO : vérifier si l'entrée est valide par je ne sais quel moyen
 
